@@ -1,12 +1,12 @@
 // NetworkUtils.kt
 package common
 
-import android.util.Log
 import java.io.IOException
 import java.net.DatagramPacket
 import java.net.DatagramSocket
 import java.net.InetAddress
 import java.net.MulticastSocket
+import kotlin.experimental.xor
 
 /**
  * This class provides utility functions for network operations.
@@ -34,9 +34,9 @@ class NetworkUtils {
                     val packet = DatagramPacket(data, data.size, address, PORT)
                     socket.send(packet)
                     socket.close()
-                    Log.d(TAG, "Message sent to $address: $message")
+                    println("$TAG: Message sent to $address: $message")
                 } catch (e: IOException) {
-                    Log.e(TAG, "Error sending message to $address", e)
+                    System.err.println("$TAG: Error sending message to $address: ${e.message}")
                 }
             }.start()
         }
@@ -55,9 +55,9 @@ class NetworkUtils {
                     val packet = DatagramPacket(data, encryptedMessage.length, broadcastAddress, PORT)
                     socket.send(packet)
                     socket.close()
-                    Log.d(TAG, "Broadcast message sent: $message")
+                    println("$TAG: Broadcast message sent: $message")
                 } catch (e: IOException) {
-                    Log.e(TAG, "Error sending broadcast message", e)
+                    System.err.println("$TAG: Error sending broadcast message: ${e.message}")
                 }
             }.start()
         }
@@ -74,12 +74,12 @@ class NetworkUtils {
                         val packet = DatagramPacket(buffer, buffer.size)
                         socket.receive(packet)
                         val encryptedMessage = String(packet.data, packet.offset, packet.length)
-                       val message = decryptMessage(encryptedMessage, SECRET_KEY)
+                        val message = decryptMessage(encryptedMessage, SECRET_KEY)
                         val address = packet.address
                         callback(message, address)
                     }
                 } catch (e: IOException) {
-                    Log.e(TAG, "Error listening for messages", e)
+                    System.err.println("$TAG: Error listening for messages: ${e.message}")
                 }
             }.start()
         }
@@ -97,10 +97,10 @@ class NetworkUtils {
                     val packet = DatagramPacket(data, encryptedMessage.length, multicastAddress, PORT)
                     socket.send(packet)
                     socket.close()
-                   Log.d(TAG, "Multicast message sent: $message")
+                    println("$TAG: Multicast message sent: $message")
                 } catch (e: IOException) {
-                    Log.e(TAG, "Error sending multicast message", e)
-               }
+                    System.err.println("$TAG: Error sending multicast message: ${e.message}")
+                }
             }.start()
         }
 

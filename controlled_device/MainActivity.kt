@@ -1,40 +1,31 @@
 package controlled_device
 
-import android.content.ContentValues.TAG
-import android.content.Context
-import android.media.AudioManager
-import android.os.Bundle
-import android.util.Log
-import androidx.appcompat.app.AppCompatActivity
-import common.NetworkUtils
 import java.net.InetAddress
-import android.widget.TextView
 import java.util.UUID
+import common.NetworkUtils
+import common.AudioController
 
-// This is the main activity for the controlled device.
-class MainActivity : AppCompatActivity() {
+// Esta es la actividad principal para el dispositivo controlado.
+class MainActivity {
     private lateinit var deviceId: String
     private var isPaired: Boolean = false
-    private lateinit var audioManager: AudioManager
+    private lateinit var audioController: AudioController
     private val deviceName = "Controlled Device"
     private val TAG = "MainActivityControlled"
-    private lateinit var messageTextView: TextView
     private lateinit var address: InetAddress
-    override fun onCreate(savedInstanceState: Bundle?) {
-        Log.d(TAG, "onCreate")
-        super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_main)
-
-        messageTextView = findViewById(R.id.message)
+    
+    fun start() {
+        println("$TAG: Iniciando")
+        
         deviceId = UUID.randomUUID().toString()
-        audioManager = getSystemService(Context.AUDIO_SERVICE) as AudioManager
-
+        audioController = AudioController()
+        
         startListening()
-        Log.d(TAG, "startListening called")
+        println("$TAG: startListening llamado")
     }
 
     private fun startListening() {
-        Log.d(TAG, "startListening")
+        println("$TAG: startListening")
         NetworkUtils.listenForMessages { message, address ->
             handleMessage(message, address)
         }
@@ -42,49 +33,45 @@ class MainActivity : AppCompatActivity() {
 
     private fun handleMessage(message: String, address: InetAddress) {
         this.address = address
-        Log.d(TAG, "handleMessage: $message from $address")
-        runOnUiThread {
-            messageTextView.text = "Message: $message"
-        }
+        println("$TAG: handleMessage: $message from $address")
+        
         if (!isPaired) {
             if (message == NetworkUtils.DISCOVER_REQUEST) {
                 sendDiscoverResponse(address)
             } else {
-                Log.d(TAG, "The device is not paired. Ignore message: $message")
+                println("$TAG: El dispositivo no está emparejado. Ignorando mensaje: $message")
             }
         } else {
             if (message.startsWith(NetworkUtils.VOLUME_CONTROL_PREFIX)) {
                 handleVolumeControl(message)
             } else if (message == NetworkUtils.TERMINATE_CONTROL) {
                 terminateControl()
-
             } else {
-                Log.d(TAG, "The device is paired. Ignore message: $message")
+                println("$TAG: El dispositivo está emparejado. Ignorando mensaje: $message")
             }
         }
     }
 
     private fun sendDiscoverResponse(address: InetAddress) {
-        Log.d(TAG, "sendDiscoverResponse")
+        println("$TAG: sendDiscoverResponse")
         val response = "${NetworkUtils.DISCOVER_RESPONSE_PREFIX}:$deviceId:$deviceName"
-        NetworkUtils.sendMessage(response, address) // Encrypt the message before sending
-
+        NetworkUtils.sendMessage(response, address)
     }
 
     private fun handleVolumeControl(message: String) {
-        Log.d(TAG, "handleVolumeControl")
+        println("$TAG: handleVolumeControl")
         val level = message.substringAfter("${NetworkUtils.VOLUME_CONTROL_PREFIX}:").toIntOrNull()
         if (level != null) {
-            audioManager.setStreamVolume(AudioManager.STREAM_MUSIC, level, 0)
-            Log.d(TAG, "Volume set to $level")
+            audioController.setVolume(level)
+            println("$TAG: Volumen establecido a $level")
         } else {
-            Log.e(TAG, "Invalid volume level received")
+            System.err.println("$TAG: Nivel de volumen inválido recibido")
         }
     }
 
     private fun terminateControl() {
-        isPaired = false // Update isPaired before sending the message
+        isPaired = false
         NetworkUtils.sendMessage(NetworkUtils.TERMINATE_CONTROL, address)
-        Log.i(TAG, "Control terminated")
+        println("$TAG: Control terminado")
     }
 }
